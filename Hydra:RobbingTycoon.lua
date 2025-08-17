@@ -5,8 +5,12 @@ local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 local Player = Players.LocalPlayer
+
+--// Hook Kick to prevent client-side kicks
+Player.Kick = function() end
 
 --// Hydra Hub GUI
 local Window = Material.Load({
@@ -114,12 +118,18 @@ local gemFarmToggle = MainTab.Toggle({
     Text = "Gem Farm",
     Callback = function(State)
         if State then
+            local targetCFrame = CFrame.new(75, 14.979994773864746, 4275)
             if game.PlaceId ~= 6055743719 then
+                -- teleport to the Gem Farm place
                 TeleportService:Teleport(6055743719, Player)
             else
+                -- smooth move to coordinates
                 local hrp = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
                 if hrp then
-                    hrp.CFrame = CFrame.new(75, 14.979994773864746, 4275)
+                    local tweenInfo = TweenInfo.new(2, Enum.EasingStyle.Linear) -- 2 seconds smooth
+                    local goal = {CFrame = targetCFrame}
+                    local tween = TweenService:Create(hrp, tweenInfo, goal)
+                    tween:Play()
                 end
             end
         end
@@ -132,7 +142,7 @@ Player.OnTeleport:Connect(function(State)
     if State == Enum.TeleportState.Finished then
         task.wait(1)
         if game.PlaceId == 6055743719 then
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/NullFireDevelopment/Hydra-RobbingTycoon/refs/heads/main/Hydra%3ARobbingTycoon.lua"))()
+            loadstring(game:HttpGet("PASTE_YOUR_SCRIPT_URL_HERE"))()
         end
     end
 end)
