@@ -5,7 +5,6 @@ local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 
 local Player = Players.LocalPlayer
 
@@ -113,24 +112,33 @@ Player.CharacterAdded:Connect(function(char)
     end
 end)
 
+--// Safe incremental movement to target
+local function SafeMoveTo(targetPos)
+    local HRP = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+    local Hum = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid")
+    if not HRP or not Hum then return end
+
+    local step = 2 -- studs per iteration, can adjust smaller if kicked
+    while (HRP.Position - targetPos).Magnitude > 1 do
+        local direction = (targetPos - HRP.Position).Unit
+        local nextPos = HRP.Position + direction * step
+        Hum:MoveTo(nextPos)
+        task.wait(0.1)
+    end
+end
+
 --// Gem Farm Toggle
 local gemFarmToggle = MainTab.Toggle({
     Text = "Gem Farm",
     Callback = function(State)
         if State then
-            local targetCFrame = CFrame.new(75, 14.979994773864746, 4275)
+            local targetPos = Vector3.new(75, 14.979994773864746, 4275)
             if game.PlaceId ~= 6055743719 then
                 -- teleport to the Gem Farm place
                 TeleportService:Teleport(6055743719, Player)
             else
-                -- smooth move to coordinates
-                local hrp = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    local tweenInfo = TweenInfo.new(2, Enum.EasingStyle.Linear) -- 2 seconds smooth
-                    local goal = {CFrame = targetCFrame}
-                    local tween = TweenService:Create(hrp, tweenInfo, goal)
-                    tween:Play()
-                end
+                -- move safely to target coordinates
+                SafeMoveTo(targetPos)
             end
         end
     end,
