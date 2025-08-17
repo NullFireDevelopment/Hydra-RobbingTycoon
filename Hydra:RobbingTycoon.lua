@@ -184,7 +184,7 @@ Player.OnTeleport:Connect(function(State)
         task.wait(1)
         if game.PlaceId == gemPlaceId then
             -- reload Hydra Hub automatically (replace with your script URL if needed)
-            -- loadstring(game:HttpGet("PASTE_YOUR_SCRIPT_URL_HERE"))()
+            loadstring(game:HttpGet("loadstring(game:HttpGet("https://raw.githubusercontent.com/NullFireDevelopment/Hydra-RobbingTycoon/refs/heads/main/Hydra%3ARobbingTycoon.lua"))()
         end
     end
 end)
