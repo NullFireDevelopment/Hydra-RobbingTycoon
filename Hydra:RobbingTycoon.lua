@@ -4,12 +4,10 @@ local Material = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kinl
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-
 local Player = Players.LocalPlayer
-
---// Hook Kick to prevent client-side kicks
-Player.Kick = function() end
+local Mouse = Player:GetMouse()
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
 --// Hydra Hub GUI
 local Window = Material.Load({
@@ -25,8 +23,12 @@ local MainTab = Window.New({Title = "Main"})
 
 --// Variables
 local NoclipEnabled = false
-local walkspeed = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") and Player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed or 16
+local walkspeed = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed or 16
 local Noclipping
+local GemFarmEnabled = false
+local gemPos = Vector3.new(75, 14.979994773864746, 4275)
+local gemPlaceId = 6055743719
+local returnPos = Vector3.new(0.218, 8.8, 11.155)
 
 --// Noclip Functions
 local function StartNoclip()
@@ -67,16 +69,14 @@ local noclipToggle = MainTab.Toggle({
     Enabled = false
 })
 
---// Function to update toggle visually
 local function UpdateToggle(State)
     noclipToggle.Callback(State)
     noclipToggle.Toggle.Text = State and "ON" or "OFF"
 end
 
---// Keybind for Noclip (UserInputService)
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.N then
+Mouse.KeyDown:Connect(function(KEY)
+    KEY = KEY:lower()
+    if KEY == "n" then
         if NoclipEnabled then
             StopNoclip()
             UpdateToggle(false)
@@ -91,7 +91,6 @@ end)
 MainTab.Slider({
     Text = "WalkSpeed",
     Callback = function(Value)
-        walkspeed = Value
         local hum = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid")
         if hum then
             hum.WalkSpeed = Value
@@ -102,55 +101,90 @@ MainTab.Slider({
     Def = walkspeed
 })
 
---// Reapply WalkSpeed and Noclip on respawn
-Player.CharacterAdded:Connect(function(char)
-    task.wait(0.1)
-    local hum = char:WaitForChild("Humanoid", 5)
-    if hum then hum.WalkSpeed = walkspeed end
-    if NoclipEnabled then
-        StartNoclip()
+--// Fly function (300 speed)
+local function FlyTo(pos)
+    local hrp = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        while (hrp.Position - pos).Magnitude > 2 and GemFarmEnabled do
+            local direction = (pos - hrp.Position).Unit
+            hrp.CFrame = hrp.CFrame + direction * 300 * task.wait()
+        end
     end
-end)
+end
 
---// Safe incremental movement to target
-local function SafeMoveTo(targetPos)
-    local HRP = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
-    local Hum = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid")
-    if not HRP or not Hum then return end
-
-    local step = 2 -- studs per iteration, can adjust smaller if kicked
-    while (HRP.Position - targetPos).Magnitude > 1 do
-        local direction = (targetPos - HRP.Position).Unit
-        local nextPos = HRP.Position + direction * step
-        Hum:MoveTo(nextPos)
-        task.wait(0.1)
+--// AutoConvert function
+local function AutoConvert()
+    local popup = PlayerGui:FindFirstChild("AreYouSure")
+    if popup and popup:FindFirstChild("Frame") and popup.Frame:FindFirstChild("Convert") then
+        local button = popup.Frame.Convert
+        local absPos = button.AbsolutePosition + button.AbsoluteSize/2
+        VirtualInputManager:SendMouseMove(absPos.X, absPos.Y)
+        VirtualInputManager:SendMouseButtonEvent(absPos.X, absPos.Y, 0, true, game, 0)
+        VirtualInputManager:SendMouseButtonEvent(absPos.X, absPos.Y, 0, false, game, 0)
     end
+end
+
+--// Gem Farm Loop
+local function StartGemFarm()
+    task.spawn(function()
+        while GemFarmEnabled do
+            -- Teleport to Gem Farm place if not there
+            if game.PlaceId ~= gemPlaceId then
+                TeleportService:Teleport(gemPlaceId, Player)
+                break -- stop script, will auto-continue after teleport
+            end
+
+            -- Fly to gem coordinates
+            FlyTo(gemPos)
+            task.wait(0.05)
+
+            -- Auto click Convert button
+            AutoConvert()
+
+            -- Wait for game auto-teleport back
+            repeat task.wait(0.5) until Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+
+            -- Detect return position and auto-fly again
+            local hrp = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                while (hrp.Position - returnPos).Magnitude < 2 and GemFarmEnabled do
+                    task.wait(0.1)
+                    FlyTo(gemPos)
+                    AutoConvert()
+                    repeat task.wait(0.5) until Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+                end
+            end
+        end
+    end)
 end
 
 --// Gem Farm Toggle
 local gemFarmToggle = MainTab.Toggle({
     Text = "Gem Farm",
     Callback = function(State)
+        GemFarmEnabled = State
         if State then
-            local targetPos = Vector3.new(75, 14.979994773864746, 4275)
-            if game.PlaceId ~= 6055743719 then
-                -- teleport to the Gem Farm place
-                TeleportService:Teleport(6055743719, Player)
-            else
-                -- move safely to target coordinates
-                SafeMoveTo(targetPos)
-            end
+            StartGemFarm()
         end
     end,
     Enabled = false
 })
 
---// Auto-execute after teleport
+--// AutoClicker Button
+MainTab.Button({
+    Text = "AutoClicker",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/stavurself/FastClicker/refs/heads/main/main.lua"))()
+    end
+})
+
+--// Auto-execute after teleport (optional)
 Player.OnTeleport:Connect(function(State)
-    if State == Enum.TeleportState.Finished then
+    if State == Enum.TeleportState.Started or State == Enum.TeleportState.Finished then
         task.wait(1)
-        if game.PlaceId == 6055743719 then
-            loadstring(game:HttpGet("PASTE_YOUR_SCRIPT_URL_HERE"))()
+        if game.PlaceId == gemPlaceId then
+            -- reload Hydra Hub automatically (replace with your script URL if needed)
+            -- loadstring(game:HttpGet("PASTE_YOUR_SCRIPT_URL_HERE"))()
         end
     end
 end)
