@@ -132,7 +132,7 @@ Player.OnTeleport:Connect(function(State)
     if State == Enum.TeleportState.Finished then
         task.wait(1)
         if game.PlaceId == 6055743719 then
-            loadstring(game:HttpGet("PASTE_YOUR_SCRIPT_URL_HERE"))()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/NullFireDevelopment/Hydra-RobbingTycoon/refs/heads/main/Hydra%3ARobbingTycoon.lua"))()
         end
     end
 end)
